@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30907.101
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ClosestPointSearch", "ClosestPointSearch\ClosestPointSearch.vcxproj", "{880AE214-978A-470D-8004-65C9F690275E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{880AE214-978A-470D-8004-65C9F690275E}.Debug|x64.ActiveCfg = Debug|x64
+		{880AE214-978A-470D-8004-65C9F690275E}.Debug|x64.Build.0 = Debug|x64
+		{880AE214-978A-470D-8004-65C9F690275E}.Debug|x86.ActiveCfg = Debug|x64
+		{880AE214-978A-470D-8004-65C9F690275E}.Debug|x86.Build.0 = Debug|x64
+		{880AE214-978A-470D-8004-65C9F690275E}.Release|x64.ActiveCfg = Release|x64
+		{880AE214-978A-470D-8004-65C9F690275E}.Release|x64.Build.0 = Release|x64
+		{880AE214-978A-470D-8004-65C9F690275E}.Release|x86.ActiveCfg = Release|Win32
+		{880AE214-978A-470D-8004-65C9F690275E}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {552CA440-85AC-491F-B27F-0C32256D675B}
+	EndGlobalSection
+EndGlobal
