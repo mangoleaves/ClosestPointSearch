@@ -94,8 +94,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(EIGEN_INCLUDE_DIR);$(OPENMESH_INCLUDE_DIR);$(IncludePath)</IncludePath>
-    <LibraryPath>$(OPENMESH_LIB_DIR);$(LibraryPath)</LibraryPath>
+    <IncludePath>D:\lib\OpenMesh 8.1\include\;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\lib\OpenMesh 8.1\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>

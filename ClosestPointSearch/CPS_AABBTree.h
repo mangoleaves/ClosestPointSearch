@@ -200,56 +200,15 @@ namespace ClosestPointSearch
 	public:
 		AABBTree() {}
 
-		AABBTree(TriIter first, TriIter beyond)
-		{
-			insert(first, beyond);
-			build();
-		}
-
-		AABBTree(Mesh& mesh, std::vector<OpenMesh::FaceHandle> face_handles)
-		{
-			insert(mesh, face_handles);
-			build();
-		}
-
-		AABBTree(Mesh& mesh)
+		AABBTree(const Mesh& mesh)
 		{
 			insert(mesh);
-			build();
+			build(mesh);
 		}
 
 		~AABBTree()
 		{
 			clear();
-		}
-
-		void insert(TriIter first, TriIter beyond)
-		{
-			clear();
-			m_primitives.reserve(std::distance(first, beyond));
-			while (first != beyond)
-			{
-				m_primitives.push_back(*first);
-				first++;
-			}
-		}
-
-		void insert(const Mesh& mesh, std::vector<OpenMesh::FaceHandle> face_handles)
-		{
-			clear();
-			m_primitives.reserve(face_handles.size());
-			for (auto& fh : face_handles)
-			{
-				OpenMesh::Vec3d p0, p1, p2;
-				auto fv_iter = mesh.cfv_begin(fh);
-				p0 = mesh.point(*fv_iter);
-				fv_iter++;
-				p1 = mesh.point(*fv_iter);
-				fv_iter++;
-				p2 = mesh.point(*fv_iter);
-
-				m_primitives.emplace_back(Vec3d(p0.data()), Vec3d(p1.data()), Vec3d(p2.data()), fh);
-			}
 		}
 
 		void insert(const Mesh& mesh)
@@ -270,7 +229,7 @@ namespace ClosestPointSearch
 			}
 		}
 
-		void build()
+		void build(const Mesh& mesh)
 		{
 			clear_nodes();
 			if (m_primitives.size() > 1)
@@ -286,7 +245,7 @@ namespace ClosestPointSearch
 				// construct AABB tree.
 				m_p_root_node->expand(m_primitives.begin(), m_primitives.end(), m_primitives.size());
 				// build search tree
-				build_kd_tree();
+				build_kd_tree(mesh);
 			}
 		}
 
@@ -433,18 +392,23 @@ namespace ClosestPointSearch
 			}
 		}
 
-		void build_kd_tree()
+		void build_kd_tree(const Mesh& mesh)
 		{
 			std::vector<Vec3d> points;
 			std::vector<TriIter> iters;
-			points.reserve(m_primitives.size());
-			iters.reserve(m_primitives.size());
-			for (TriIter iter = m_primitives.begin(); iter != m_primitives.end(); iter++)
+			std::vector<int> point_indices;
+			points.reserve(mesh.n_vertices());
+			iters.reserve(mesh.n_vertices());
+			point_indices.reserve(mesh.n_vertices());
+
+			TriIter iter_begin = m_primitives.begin();
+			for (OpenMesh::VertexHandle vh : mesh.vertices())
 			{
-				points.emplace_back((*iter).ver0);
-				iters.emplace_back(iter);
+				points.push_back(Vec3d(mesh.point(vh).data()));
+				iters.push_back(iter_begin + mesh.cvf_begin(vh)->idx());
+				point_indices.push_back(vh.idx());
 			}
-			m_p_search_tree = new KdTree(points, iters);
+			m_p_search_tree = new KdTree(points, iters, point_indices);
 			if (m_p_search_tree == nullptr)
 			{
 				std::cerr << "Unable to allocate search tree." << std::endl;

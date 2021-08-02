@@ -14,6 +14,7 @@ namespace ClosestPointSearch
     {
     public:
         TriIter m_from;
+        int point_idx;
     public:
         KdTree_Vec3d()
             :Vec3d()
@@ -31,8 +32,8 @@ namespace ClosestPointSearch
             :Vec3d(v)
         {}
 
-        KdTree_Vec3d(const Vec3d& v, TriIter tri)
-            :Vec3d(v), m_from(tri)
+        KdTree_Vec3d(const Vec3d& v, TriIter tri, int pi = 0)
+          :Vec3d(v), m_from(tri), point_idx(pi)
         {}
 
         KdTree_Vec3d(const __m256d& v)
@@ -308,6 +309,12 @@ namespace ClosestPointSearch
             build();
         }
 
+        KdTree(const Vec3ds& points, const std::vector<TriIter>& tri_iters, const std::vector<int>& point_indices)
+        {
+            insert(points, tri_iters, point_indices);
+            build();
+        }
+
 
         void insert(const Vec3ds& points, const std::vector<TriIter>& tri_iters)
         {
@@ -315,6 +322,15 @@ namespace ClosestPointSearch
             for (int i = 0; i < points.size(); i++)
             {
                 pts.emplace_back(points[i], tri_iters[i]);
+            }
+        }
+
+        void insert(const Vec3ds& points, const std::vector<TriIter>& tri_iters, const std::vector<int>& point_indices)
+        {
+            pts.reserve(points.size());
+            for (int i = 0; i < points.size(); i++)
+            {
+                pts.emplace_back(points[i], tri_iters[i], point_indices[i]);
             }
         }
 
