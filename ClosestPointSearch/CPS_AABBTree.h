@@ -282,6 +282,19 @@ namespace ClosestPointSearch
 #endif
 		}
 
+		OpenMesh::Vec3d closest_vertex(const OpenMesh::Vec3d& query)
+		{
+			Vec3d tmp_query(query.data());
+			auto hint = is_hint_set ? preset_hint : best_hint(tmp_query);
+			Vec3d result = m_p_search_tree->search_nearest_vertex(tmp_query).first;
+#ifdef USE_VEC
+			return OpenMesh::Vec3d(result.x, result.y, result.z);
+#endif
+#ifdef USE_AVX
+			return OpenMesh::Vec3d((double*)&result.vec);
+#endif
+		}
+
 		std::pair<OpenMesh::Vec3d, OpenMesh::FaceHandle> closest_point_and_face_handle(const OpenMesh::Vec3d& query)
 		{
 			Vec3d tmp_query(query.data());
@@ -295,6 +308,21 @@ namespace ClosestPointSearch
 				OpenMesh::Vec3d((double*)&result.first.vec),
 #endif
 				result.second->face_handle);
+		}
+
+		std::pair<OpenMesh::Vec3d,int> closest_vertex_and_index(const OpenMesh::Vec3d& query)
+		{
+			Vec3d tmp_query(query.data());
+			auto hint = is_hint_set ? preset_hint : best_hint(tmp_query);
+			auto result = m_p_search_tree->search_nearest_vertex(tmp_query);
+			return std::pair<OpenMesh::Vec3d, int>(
+#ifdef USE_VEC
+				OpenMesh::Vec3d(result.first.x, result.first.y, result.first.z);
+#endif
+#ifdef USE_AVX
+				OpenMesh::Vec3d((double*)&result.first.vec),
+#endif
+				result.second);
 		}
 
 		std::vector<OpenMesh::Vec3d> closest_point(const std::vector<OpenMesh::Vec3d>& queries)

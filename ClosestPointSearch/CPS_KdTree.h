@@ -382,6 +382,12 @@ namespace ClosestPointSearch
             return std::pair<Vec3d, TriIter>(Vec3d(cp->vec), cp->m_from);
         }
 
+        std::pair<Vec3d, int> search_nearest_vertex(const Vec3d& query)
+        {
+            OrthogonalNearestSeach ons(this, KdVec3d(query));
+            KdVec3dIter cp = ons.closest_point_iter();
+            return std::pair<Vec3d, int>(Vec3d(cp->vec), cp->point_idx);
+        }
     private:
         NodePtr create_leaf_node(PointContainer& c)
         {
