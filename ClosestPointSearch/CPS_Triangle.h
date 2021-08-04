@@ -2,7 +2,6 @@
 
 #include "CPS_Vector.h"
 #include "CPS_BoundingBox.h"
-#include "MeshDefinition.h"
 
 namespace ClosestPointSearch
 {
@@ -368,7 +367,7 @@ namespace ClosestPointSearch
 		bool is_plane_degenerate;
 		bool has_obtuse_angle;
 		// used for recording openmesh face handle
-		OpenMesh::FaceHandle face_handle;
+		int face_id;
 	public:
 		Triangle() {}
 
@@ -417,10 +416,10 @@ namespace ClosestPointSearch
 			}
 		}
 
-		Triangle(const Vec3d& p1, const Vec3d& p2, const Vec3d& p3, const OpenMesh::FaceHandle& fh)
+		Triangle(const Vec3d& p1, const Vec3d& p2, const Vec3d& p3, int fid)
 			:Triangle(p1, p2,p3)
 		{
-			face_handle = fh;
+			face_id = fid;
 		}
 
 		Vec3d normal()

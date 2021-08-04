@@ -194,27 +194,12 @@ namespace ClosestPointSearch
 		Triangles m_primitives;	// store iterators from triangles(typename vector<Triangle>)
 		Node* m_p_root_node = nullptr;
 		KdTree* m_p_search_tree = nullptr;
-
-		std::pair<Vec3d, TriIter> preset_hint;
-		bool is_hint_set;
 	public:
 		AABBTree() {}
 
-		AABBTree(TriIter first, TriIter beyond)
+		AABBTree(const std::vector<double> coords, const std::vector<int> indices)
 		{
-			insert(first, beyond);
-			build();
-		}
-
-		AABBTree(Mesh& mesh, std::vector<OpenMesh::FaceHandle> face_handles)
-		{
-			insert(mesh, face_handles);
-			build();
-		}
-
-		AABBTree(Mesh& mesh)
-		{
-			insert(mesh);
+			insert(coords, indices);
 			build();
 		}
 
@@ -223,50 +208,25 @@ namespace ClosestPointSearch
 			clear();
 		}
 
-		void insert(TriIter first, TriIter beyond)
+		void insert(const std::vector<double> coords, const std::vector<int> indices)
 		{
 			clear();
-			m_primitives.reserve(std::distance(first, beyond));
-			while (first != beyond)
+
+			std::vector<Vec3d> points;
+			points.reserve(coords.size() / 3);
+			for (int i = 0; i < coords.size(); i += 3)
 			{
-				m_primitives.push_back(*first);
-				first++;
+				points.emplace_back(coords[i], coords[i + 1], coords[i + 2]);
 			}
-		}
 
-		void insert(const Mesh& mesh, std::vector<OpenMesh::FaceHandle> face_handles)
-		{
-			clear();
-			m_primitives.reserve(face_handles.size());
-			for (auto& fh : face_handles)
+			m_primitives.reserve(indices.size() / 3);
+			for (int face_id = 0; face_id < indices.size() / 3; face_id++)
 			{
-				OpenMesh::Vec3d p0, p1, p2;
-				auto fv_iter = mesh.cfv_begin(fh);
-				p0 = mesh.point(*fv_iter);
-				fv_iter++;
-				p1 = mesh.point(*fv_iter);
-				fv_iter++;
-				p2 = mesh.point(*fv_iter);
+				int v0 = indices[face_id * 3];
+				int v1 = indices[face_id * 3 + 1];
+				int v2 = indices[face_id * 3 + 2];
 
-				m_primitives.emplace_back(Vec3d(p0.data()), Vec3d(p1.data()), Vec3d(p2.data()), fh);
-			}
-		}
-
-		void insert(const Mesh& mesh)
-		{
-			clear();
-			m_primitives.reserve(mesh.n_faces());
-			for (auto fh : mesh.faces())
-			{
-				OpenMesh::Vec3d p0, p1, p2;
-				auto fv_iter = mesh.cfv_begin(fh);
-				p0 = mesh.point(*fv_iter);
-				fv_iter++;
-				p1 = mesh.point(*fv_iter);
-				fv_iter++;
-				p2 = mesh.point(*fv_iter);
-
-				m_primitives.emplace_back(Vec3d(p0.data()), Vec3d(p1.data()), Vec3d(p2.data()), fh);
+				m_primitives.emplace_back(points[v0], points[v1], points[v2], face_id);
 			}
 		}
 
@@ -279,9 +239,8 @@ namespace ClosestPointSearch
 				m_p_root_node = new Node[m_primitives.size() - 1]();
 				if (m_p_root_node == nullptr)
 				{
-					std::cerr << "Unable to allocate memory for AABB tree" << std::endl;
 					clear();
-					assert(0);
+					throw std::bad_alloc();
 				}
 				// construct AABB tree.
 				m_p_root_node->expand(m_primitives.begin(), m_primitives.end(), m_primitives.size());
@@ -295,108 +254,65 @@ namespace ClosestPointSearch
 
 		void clear()
 		{
-			is_hint_set = false;
 			clear_nodes();
 			m_primitives.clear();
 			clear_search_tree();
 		}
 
-		void set_hint(const OpenMesh::Vec3d& query)
+		Vec3d closest_point(const Vec3d& query)
 		{
-			Vec3d tmp_query(query.data());
-			preset_hint = best_hint(tmp_query);
-			is_hint_set = true;
+			auto hint = best_hint(query);
+			return closest_point(query, hint).first;
 		}
 
-		void unset_hint() { is_hint_set = false; }
-
-		OpenMesh::Vec3d closest_point(const OpenMesh::Vec3d& query)
+		std::pair<Vec3d, int> closest_point_and_face_id(const Vec3d& query)
 		{
-			Vec3d tmp_query(query.data());
-			auto hint = is_hint_set ? preset_hint : best_hint(tmp_query);
-			Vec3d result = closest_point(tmp_query, hint).first;
-#ifdef USE_VEC
-			return OpenMesh::Vec3d(result.x, result.y, result.z);
-#endif
-#ifdef USE_AVX
-			return OpenMesh::Vec3d((double*)&result.vec);
-#endif
+			auto hint = best_hint(query);
+			std::pair<Vec3d, TrianglePtr> result = closest_point(query, hint);
+			return std::pair<Vec3d, int>(result.first, result.second->face_id);
 		}
 
-		std::pair<OpenMesh::Vec3d, OpenMesh::FaceHandle> closest_point_and_face_handle(const OpenMesh::Vec3d& query)
+		std::vector<Vec3d> closest_point(const std::vector<Vec3d>& queries)
 		{
-			Vec3d tmp_query(query.data());
-			auto hint = is_hint_set ? preset_hint : best_hint(tmp_query);
-			std::pair<Vec3d, TrianglePtr> result = closest_point(tmp_query, hint);
-			return std::pair<OpenMesh::Vec3d, OpenMesh::FaceHandle>(
-#ifdef USE_VEC
-				OpenMesh::Vec3d(result.first.x, result.first.y, result.first.z),
-#endif
-#ifdef USE_AVX
-				OpenMesh::Vec3d((double*)&result.first.vec),
-#endif
-				result.second->face_handle);
-		}
-
-		std::vector<OpenMesh::Vec3d> closest_point(const std::vector<OpenMesh::Vec3d>& queries)
-		{
-			std::vector<OpenMesh::Vec3d> result;
+			std::vector<Vec3d> result;
 			result.reserve(queries.size());
 
-			Vec3d tmp_query;
-			tmp_query = Vec3d(queries[0].data());
-			auto hint = is_hint_set ? preset_hint : best_hint(tmp_query);
+			auto hint = best_hint(queries[0]);
 
-			for (const OpenMesh::Vec3d& query : queries)
+			for (const Vec3d& query : queries)
 			{
-				tmp_query = Vec3d(query.data());
-				Vec3d cp = closest_point(tmp_query, hint).first;
-#ifdef USE_VEC
-				result.emplace_back(cp.x, cp.y, cp.z);
-#endif
-#ifdef USE_AVX
-				result.emplace_back((double*)&cp.vec);
-#endif
+				Vec3d cp = closest_point(query, hint).first;
+				result.emplace_back(cp);
 			}
 			return result;
 		}
 
-		std::vector<std::pair<OpenMesh::Vec3d, OpenMesh::FaceHandle> > closest_point_and_face_handle(const std::vector<OpenMesh::Vec3d>& queries)
+		std::vector<std::pair<Vec3d, int>> closest_point_and_face_id(const std::vector<Vec3d>& queries)
 		{
-			std::vector<std::pair<OpenMesh::Vec3d, OpenMesh::FaceHandle> > result;
+			std::vector<std::pair<Vec3d, int>> result;
 			result.reserve(queries.size());
 
-			Vec3d tmp_query;
-			tmp_query = Vec3d(queries[0].data());
-			auto hint = is_hint_set ? preset_hint : best_hint(tmp_query);
+			auto hint = best_hint(queries[0]);
 
-			for (const OpenMesh::Vec3d& query : queries)
+			for (const Vec3d& query : queries)
 			{
-				tmp_query = Vec3d(query.data());
-				auto res = closest_point(tmp_query, hint);
-#ifdef USE_VEC
-				result.emplace_back(OpenMesh::Vec3d(res.first.x, res.first.y, res.first.z), res.second->face_handle);
-#endif
-#ifdef USE_AVX
-				result.emplace_back(OpenMesh::Vec3d((double*)&res.first.vec), res.second->face_handle);
-#endif 
+				auto res = closest_point(query, hint);
+				result.emplace_back(res.first, res.second->face_id);
 			}
 			return result;
 		}
 
-		double closest_distance(const OpenMesh::Vec3d& query)
+		double closest_distance(const Vec3d& query)
 		{
-			Vec3d tmp_query(query.data());
-			std::pair<Vec3d, TriIter> hint = is_hint_set ? preset_hint : best_hint(tmp_query);
-			return closest_distance(tmp_query, hint).first;
+			auto hint = best_hint(query);
+			return closest_distance(query, hint).first;
 		}
 
-		std::pair<double, OpenMesh::FaceHandle> closest_distance_and_face_handle(const OpenMesh::Vec3d& query)
+		std::pair<double, int> closest_distance_and_face_id(const Vec3d& query)
 		{
-			Vec3d tmp_query(query.data());
-			std::pair<Vec3d, TriIter> hint = is_hint_set ? preset_hint : best_hint(tmp_query);
-			auto res = closest_distance(tmp_query, hint);
-			return std::pair<double, OpenMesh::FaceHandle>(res.first, res.second->face_handle);
+			auto hint = best_hint(query);
+			auto res = closest_distance(query, hint);
+			return std::pair<double, int>(res.first, res.second->face_id);
 		}
 
 	private:
@@ -447,9 +363,8 @@ namespace ClosestPointSearch
 			m_p_search_tree = new KdTree(points, iters);
 			if (m_p_search_tree == nullptr)
 			{
-				std::cerr << "Unable to allocate search tree." << std::endl;
 				clear();
-				assert(0);
+				throw std::bad_alloc();
 			}
 		}
 

@@ -3,6 +3,7 @@
 #include <iostream>
 #include <vector>
 #include <array>
+#include <algorithm>
 #include "AVX_utils.h"
 
 namespace ClosestPointSearch
